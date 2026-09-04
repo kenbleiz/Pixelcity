@@ -97,6 +97,13 @@ export function eventSubCallbackUrl(): string {
 
 export function eventSubStatus(): EventSubStatus {
   if (!twitchEventSubConfigured()) {
+    if (twitchEventSubWebhookConfigured()) {
+      return {
+        ready: true,
+        note: "EventSub webhook mounted. Helix auto-subscribe skipped — set TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BROADCASTER_ID, TWITCH_EVENTSUB_CALLBACK_URL to create subscriptions on startup.",
+        subscriptions: [],
+      };
+    }
     return {
       ready: false,
       note: "EventSub idle — simulator HTTP API is active. Fill TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_EVENTSUB_SECRET, TWITCH_BROADCASTER_ID, TWITCH_EVENTSUB_CALLBACK_URL to enable.",
@@ -305,11 +312,19 @@ export function attachEventSub(app: Express, handlers: EventSubHandlers): void {
 
 export async function startEventSub(): Promise<void> {
   if (!twitchEventSubConfigured()) {
-    subscribeState = {
-      ready: false,
-      note: "skipped — set TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_EVENTSUB_SECRET, TWITCH_BROADCASTER_ID, TWITCH_EVENTSUB_CALLBACK_URL to enable.",
-      subscriptions: [],
-    };
+    if (twitchEventSubWebhookConfigured()) {
+      subscribeState = {
+        ready: true,
+        note: "webhook mounted (secret set); Helix auto-subscribe skipped until Client ID/Secret, Broadcaster ID, and CALLBACK_URL are set.",
+        subscriptions: [],
+      };
+    } else {
+      subscribeState = {
+        ready: false,
+        note: "skipped — set TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_EVENTSUB_SECRET, TWITCH_BROADCASTER_ID, TWITCH_EVENTSUB_CALLBACK_URL to enable.",
+        subscriptions: [],
+      };
+    }
     console.log(`[twitch/eventsub] ${subscribeState.note}`);
     return;
   }

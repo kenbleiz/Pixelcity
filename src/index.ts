@@ -17,7 +17,9 @@ const hub = new Hub();
 
 function publish(result: MutationResult): MutationResult {
   if (result.ok) {
-    void town.persist();
+    void town.persist().catch((err) => {
+      console.error("[town] persist failed", err);
+    });
     hub.broadcast({ type: "state", payload: town.snapshot() });
     for (const event of result.events) {
       hub.broadcast({ type: "event", payload: event });
