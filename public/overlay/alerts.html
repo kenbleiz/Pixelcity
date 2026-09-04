@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chatville — Alerts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/overlay.css" />
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      color: var(--paper);
+    }
+    #stack {
+      position: absolute;
+      top: 110px;
+      right: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 560px;
+    }
+    .toast {
+      padding: 16px 18px;
+      animation: in 0.25s steps(4, end);
+    }
+    .toast .k {
+      font-size: 9px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .toast .m {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    #tiplog {
+      position: absolute;
+      left: 36px;
+      bottom: 36px;
+      width: 520px;
+      padding: 16px 18px;
+    }
+    #tiplog h2 {
+      margin: 0 0 10px;
+      font-size: 10px;
+      color: var(--gold);
+    }
+    #tiplog p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    @keyframes in {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: none; opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stack"></div>
+  <aside id="tiplog" class="hud-plaque">
+    <h2>LAST TIP</h2>
+    <p id="tip">Aucun bits pour l’instant</p>
+  </aside>
+  <script type="module">
+    import { connectTownSocket } from "/shared/ws-client.js";
+
+    const stack = document.getElementById("stack");
+    const tip = document.getElementById("tip");
+
+    const labels = {
+      follow: "FOLLOW",
+      sub: "SUB",
+      bits: "BITS",
+      build: "BUILD",
+      road: "ROAD",
+      park: "PARK",
+      demolish: "DEMO",
+      vote: "VOTE",
+      goal: "GOAL",
+    };
+
+    function toast(event) {
+      const el = document.createElement("div");
+      el.className = "toast hud-plaque";
+      el.innerHTML = `<div class="k">${labels[event.kind] || event.kind}</div><div class="m"></div>`;
+      el.querySelector(".m").textContent = event.message;
+      stack.prepend(el);
+      while (stack.children.length > 4) stack.lastChild.remove();
+      setTimeout(() => el.remove(), 7000);
+    }
+
+    connectTownSocket((msg) => {
+      if (msg.type === "state" && msg.payload.lastTip) {
+        const t = msg.payload.lastTip;
+        tip.textContent = `${t.user} · ${t.amount} bits`;
+      }
+      if (msg.type === "event") {
+        toast(msg.payload);
+        if (msg.payload.kind === "bits") {
+          tip.textContent = `${msg.payload.user} · ${msg.payload.amount} bits`;
+        }
+      }
+      if (msg.type === "flash") {
+        tip.textContent = `${msg.payload.user} · ${msg.payload.amount} bits`;
+      }
+    });
+  </script>
+</body>
+</html>

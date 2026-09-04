@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chatville — Simulateur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/overlay.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, #3a2416 0, transparent 40%),
+        #120c08;
+      color: var(--paper);
+      padding: 24px;
+    }
+    h1 { font-size: 18px; color: var(--gold); margin: 0 0 8px; }
+    .sub { font-family: VT323, monospace; font-size: 22px; margin: 0 0 20px; opacity: 0.9; }
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      max-width: 1600px;
+    }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+    .panel { padding: 16px; }
+    label { display: block; font-size: 9px; margin: 12px 0 6px; color: var(--gold); }
+    input, textarea {
+      width: 100%;
+      font-family: VT323, monospace;
+      font-size: 22px;
+      background: #1a0e08;
+      color: #f4e7c3;
+      border: 3px solid #6a4124;
+      padding: 8px 10px;
+    }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      font-family: "Press Start 2P", monospace;
+      font-size: 9px;
+      padding: 10px 12px;
+      background: var(--gold);
+      color: #1a0e08;
+      border: 3px solid #1a0e08;
+      box-shadow: 3px 3px 0 #1a0e08;
+      cursor: pointer;
+    }
+    button:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #1a0e08; }
+    button.ghost { background: #f4e7c3; }
+    button.hot { background: #ff6b9d; }
+    .log {
+      height: 180px;
+      overflow: auto;
+      background: #0b0705;
+      border: 3px solid #6a4124;
+      padding: 8px;
+      font-family: VT323, monospace;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+    .preview-wrap { overflow: hidden; height: 405px; background: #000; border: 4px solid #1a0e08; }
+    .preview-wrap iframe {
+      width: 1920px;
+      height: 1080px;
+      border: 0;
+      transform: scale(0.375);
+      transform-origin: 0 0;
+    }
+    .links { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
+    .links a { color: var(--gold); font-size: 9px; }
+    .ok { color: #8af0ff; }
+    .err { color: #ff6b9d; }
+  </style>
+</head>
+<body>
+  <h1>CHATVILLE / PIXELCITY</h1>
+  <p class="sub">Simulateur chat + events Twitch — pas besoin d’une vraie chaîne pour tester l’overlay OBS.</p>
+  <div class="links">
+    <a href="/overlay" target="_blank">Overlay ville (OBS)</a>
+    <a href="/overlay/alerts" target="_blank">Overlay alerts</a>
+    <a href="/overlay/goal" target="_blank">Overlay objectif</a>
+  </div>
+  <div class="layout">
+    <section class="panel hud-plaque">
+      <label>Pseudo viewer</label>
+      <input id="user" value="Ada" />
+      <label>Message chat</label>
+      <input id="message" value="!build" />
+      <div class="row" style="margin-top:12px">
+        <button id="send">Envoyer</button>
+        <button class="ghost" data-cmd="!build">!build</button>
+        <button class="ghost" data-cmd="!road">!road</button>
+        <button class="ghost" data-cmd="!park">!park</button>
+        <button class="ghost" data-cmd="!demolish">!demolish</button>
+        <button class="ghost" data-cmd="!vote">!vote</button>
+      </div>
+      <label>Events Twitch (simulés)</label>
+      <div class="row">
+        <button class="hot" id="follow">Follow → arbre</button>
+        <button class="hot" id="sub">Sub → maison/shop</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="bits" type="number" min="1" value="100" style="flex:1" />
+        <button class="hot" id="cheer">Bits → flash</button>
+      </div>
+      <p style="font-size:9px;line-height:1.6;margin:14px 0 8px">
+        Cooldown ~2s / viewer. Démolition limitée pour empêcher de raser la carte.
+        Coords optionnelles : <code>!build 12 8</code> (0–49).
+      </p>
+      <div class="log" id="log"></div>
+    </section>
+    <section>
+      <div class="preview-wrap hud-plaque">
+        <iframe src="/overlay" title="Town overlay preview"></iframe>
+      </div>
+    </section>
+  </div>
+  <script>
+    const logEl = document.getElementById("log");
+    const userEl = document.getElementById("user");
+    const msgEl = document.getElementById("message");
+
+    function log(text, cls) {
+      const line = document.createElement("div");
+      line.className = cls || "";
+      line.textContent = text;
+      logEl.prepend(line);
+    }
+
+    async function post(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      log(`${res.ok ? "OK" : "ERR"} ${data.message || JSON.stringify(data)}`, res.ok ? "ok" : "err");
+      return data;
+    }
+
+    document.getElementById("send").onclick = () =>
+      post("/api/chat", { user: userEl.value, message: msgEl.value });
+
+    document.querySelectorAll("[data-cmd]").forEach((btn) => {
+      btn.onclick = () => {
+        msgEl.value = btn.dataset.cmd;
+        post("/api/chat", { user: userEl.value, message: btn.dataset.cmd });
+      };
+    });
+
+    document.getElementById("follow").onclick = () =>
+      post("/api/twitch/follow", { user: userEl.value });
+    document.getElementById("sub").onclick = () =>
+      post("/api/twitch/sub", { user: userEl.value, tier: "1000" });
+    document.getElementById("cheer").onclick = () =>
+      post("/api/twitch/bits", { user: userEl.value, amount: Number(document.getElementById("bits").value) });
+
+    msgEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("send").click();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chatville — Goal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/overlay.css" />
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      color: var(--paper);
+    }
+    #plaque {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 820px;
+      padding: 16px 20px 18px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+    .unlocked {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #8af0ff;
+    }
+  </style>
+</head>
+<body>
+  <section id="plaque" class="hud-plaque">
+    <h1 id="title">OBJECTIF MÉTRO</h1>
+    <div class="row">
+      <span id="label">0 / 100</span>
+      <span id="detail">maisons + votes</span>
+    </div>
+    <div class="pixel-bar"><span id="bar" style="width:0%"></span></div>
+    <div class="unlocked" id="unlocked" hidden>STATION DÉBLOQUÉE — le métro est au centre</div>
+  </section>
+  <script type="module">
+    import { connectTownSocket } from "/shared/ws-client.js";
+
+    const title = document.getElementById("title");
+    const label = document.getElementById("label");
+    const detail = document.getElementById("detail");
+    const bar = document.getElementById("bar");
+    const unlocked = document.getElementById("unlocked");
+
+    function render(goal) {
+      title.textContent = `OBJECTIF ${goal.name.toUpperCase()}`;
+      const current = Math.min(goal.current, goal.target);
+      label.textContent = `${goal.current} / ${goal.target}`;
+      detail.textContent = `${goal.houseCount} maisons · ${goal.votes} votes`;
+      bar.style.width = `${Math.min(100, (goal.current / goal.target) * 100)}%`;
+      unlocked.hidden = !goal.unlocked;
+    }
+
+    connectTownSocket((msg) => {
+      if (msg.type === "state") render(msg.payload.goal);
+    });
+  </script>
+</body>
+</html>
