@@ -28,7 +28,7 @@
  *
  * Do not put secrets in the client. Keep verification on the server.
  */
-import { config } from "./config.js";
+import { config } from "../config.js";
 
 export function twitchEventSubConfigured(): boolean {
   return Boolean(

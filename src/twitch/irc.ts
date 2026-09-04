@@ -24,7 +24,7 @@
  *
  * Keep command parsing in src/commands.ts so IRC and the simulator share one path.
  */
-import { config } from "./config.js";
+import { config } from "../config.js";
 
 export function twitchIrcConfigured(): boolean {
   return Boolean(config.twitch.channel && config.twitch.botUsername && config.twitch.oauthToken);
