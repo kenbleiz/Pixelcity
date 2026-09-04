@@ -14,9 +14,17 @@ export async function loadSnapshot(): Promise<WorldSnapshot | null> {
   }
 }
 
+let writeChain: Promise<void> = Promise.resolve();
+
 export async function saveSnapshot(snapshot: WorldSnapshot): Promise<void> {
+  const pending = writeChain.then(() => writeSnapshotFile(snapshot));
+  writeChain = pending.catch(() => undefined);
+  return pending;
+}
+
+async function writeSnapshotFile(snapshot: WorldSnapshot): Promise<void> {
   await mkdir(path.dirname(config.dataFile), { recursive: true });
-  const tmp = `${config.dataFile}.tmp`;
+  const tmp = `${config.dataFile}.${process.pid}.${Date.now().toString(36)}.${Math.random().toString(16).slice(2)}.tmp`;
   await writeFile(tmp, JSON.stringify(snapshot), "utf8");
   await rename(tmp, config.dataFile);
 }

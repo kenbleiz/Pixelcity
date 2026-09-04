@@ -4,13 +4,12 @@ import { WebSocketServer } from "ws";
 import { config } from "./config.js";
 import { Game } from "./game.js";
 import { Hub } from "./hub.js";
-import { connectIrc } from "./twitch/irc.js";
-import { eventSubStatus } from "./twitch/eventsub.js";
+import { connectIrc, ircStatus } from "./twitch/irc.js";
+import { attachEventSub, eventSubStatus, startEventSub } from "./twitch/eventsub.js";
 import { Town } from "./world.js";
 import type { MutationResult } from "./types.js";
 
 const app = express();
-app.use(express.json({ limit: "32kb" }));
 
 const town = await Town.create();
 const game = new Game(town);
@@ -18,7 +17,9 @@ const hub = new Hub();
 
 function publish(result: MutationResult): MutationResult {
   if (result.ok) {
-    void town.persist();
+    void town.persist().catch((err) => {
+      console.error("[town] persist failed", err);
+    });
     hub.broadcast({ type: "state", payload: town.snapshot() });
     for (const event of result.events) {
       hub.broadcast({ type: "event", payload: event });
@@ -31,6 +32,21 @@ function publish(result: MutationResult): MutationResult {
   return result;
 }
 
+// Raw body required for HMAC — must be mounted before express.json().
+attachEventSub(app, {
+  onFollow: (user) => {
+    publish(game.handleFollow(user));
+  },
+  onSub: (user, tier) => {
+    publish(game.handleSub(user, tier));
+  },
+  onBits: (user, amount) => {
+    publish(game.handleBits(user, amount));
+  },
+});
+
+app.use(express.json({ limit: "32kb" }));
+
 app.get("/api/state", (_req, res) => {
   res.json(town.snapshot());
 });
@@ -39,6 +55,7 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     name: "Chatville / Pixelcity",
+    irc: ircStatus(),
     eventSub: eventSubStatus(),
   });
 });
@@ -109,4 +126,5 @@ server.listen(config.port, config.host, () => {
   void connectIrc((user, message) => {
     publish(game.handleChat(user, message));
   });
+  void startEventSub();
 });
