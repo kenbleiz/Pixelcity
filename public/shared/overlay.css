@@ -1,0 +1,54 @@
+:root {
+  --ink: #1b120c;
+  --paper: #f4e7c3;
+  --gold: #f0c44a;
+  --gold-dim: #c9a227;
+  --wood: #3c2416;
+  --wood-hi: #6a4124;
+  --moss: #16351c;
+  --leaf: #3e8c32;
+  --alert: #ff6b9d;
+  --sky: #7ec8e8;
+  --live: #ff4b4b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Press Start 2P", "VT323", ui-monospace, monospace;
+}
+
+.hud-plaque {
+  background: linear-gradient(180deg, var(--wood-hi), var(--wood));
+  color: var(--paper);
+  border: 4px solid #1a0e08;
+  box-shadow: 0 0 0 2px #c9a227, 4px 4px 0 #0b0705;
+  text-shadow: 2px 2px 0 #1a0e08;
+}
+
+.pixel-bar {
+  height: 14px;
+  background: #1a0e08;
+  border: 3px solid #1a0e08;
+  image-rendering: pixelated;
+}
+
+.pixel-bar > span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #f0c44a 0 8px, #ffe566 8px 10px);
+}
+
+.scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.08) 0 1px,
+    transparent 1px 3px
+  );
+  z-index: 20;
+}
